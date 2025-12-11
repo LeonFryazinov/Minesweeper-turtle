@@ -12,7 +12,7 @@ tile_width = 32
 tiles = []
 
 first_click = True
-neighbour_pos = [(-1,0),(1,0),(0,-1),(0,1)]
+neighbour_pos = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
 
 def tuple_match(a,b):
     return a[0] == b[0] and a[1] == b[1]
@@ -32,6 +32,9 @@ def pos_in_bound(pos):
     xbound = pos[0] >= 0 and pos[0] <= tile_ammount-1
     ybound = pos[1] >= 0 and pos[1] <= tile_ammount-1
     return xbound and ybound
+
+def delete_item_from_list(tile_list,):
+    pass
 class Mine:
     def __init__(self,pos):
         self.pos = pos
@@ -52,6 +55,7 @@ class Tile:
         self.pos = pos
         self.render_pos = pos[0]*tile_width-(tile_width*tile_ammount/2),pos[1]*tile_width-(tile_width*tile_ammount/2)
         self.mine = None
+        self.flagged = False
         self.width = dimensions[0]
         self.height = dimensions[1]
         self.number = 0
@@ -83,7 +87,10 @@ class Tile:
             else:#if self.number != 0:
                 t.write(str(self.number), align="center", font=("Courier", 24, "bold"))
                 t.write(str(self.pos), align="center", font=("Courier", 6, "bold"))
-        
+        if self.flagged:
+            t.color("red")
+            t.write("flag", align="center", font=("Courier", 8, "bold"))
+            t.color("black", "lime")
         
     def calculate_number(self,mine_list):
         mine_count = 0
@@ -148,22 +155,23 @@ def find_neighbours(start_pos):
             #print(search_list)
             for tile in search_list:
                 search_list.remove(tile)
+                #print(len(search_list))
                 if not tile in neighbours_list:
                     neighbours_list.append(tile)
                     
                     if tile.number == 0:
                         #add neighbouring tiles to the search list
                         for direction in neighbour_pos:
-                            pot_pos = sum_tuple(start_pos,direction)
+                            pot_pos = sum_tuple(tile.pos,direction)
                             if pos_in_bound(pot_pos):
                                 new_tile = get_tile(pot_pos[0],pot_pos[1])
                                 if new_tile != None:
                                     search_list.append(new_tile)
-                                    print(f"added new tile to search at coordinate: {pot_pos}")
+                                    #print(f"added new tile to search at coordinate: {pot_pos}")
                                     
 
 
-            print(len(search_list))
+            
             
                                     
                                     
@@ -193,8 +201,11 @@ def click_handler(x,y):
         print("no tile clicked")
     else:
         if target_tile.number == -1:
-            print("clicked mine")
-            target_tile.hidden = False
+            if target_tile.flagged:
+                target_tile.flagged = False
+            else:
+                print("clicked mine")
+                target_tile.hidden = False
             redraw(t)
         else:
             print("pressed safe")
@@ -202,12 +213,23 @@ def click_handler(x,y):
             unhidden_list = find_neighbours(tile_pos)
             for tile in unhidden_list:
                 tile.hidden = False
+                tile.flagged = False
             
             redraw(t)
 
 
 
+def right_click_handler(x,y):
+    print(f"right click X:{x} and Y: {y}")
+    target_tile = find_clicked_tile(x,y)
+    if target_tile == None:
+        print("no tile clicked")
+    else:
 
+        target_tile.flagged = True if not target_tile.flagged else False
+        redraw(t)
+        
+            
 
 
 
@@ -247,7 +269,7 @@ for tile in tiles:
     
 print(len(mines))
 screen.onscreenclick(click_handler)
-
+screen.onscreenclick(fun=right_click_handler,btn=3)
 screen.mainloop()
 
 
