@@ -1,6 +1,7 @@
 import turtle
 import random
 import math
+import time
 
 
 
@@ -61,6 +62,7 @@ class Tile:
         self.number = 0
         self.hidden = True
     def draw_tile(self,turt):
+        t.color("black","lime" if self.hidden else "#d1b06f")
         t.up()
         t.goto(sum_tuple(self.render_pos,(-self.width/2,self.height/2)))#top left corner
         t.down()
@@ -84,13 +86,14 @@ class Tile:
                 t.goto(sum_tuple(self.render_pos,(-self.width/2,-self.height/2)))
                 t.up()
                 t.color("black", "lime")
-            else:#if self.number != 0:
+            elif self.number != 0:
                 t.write(str(self.number), align="center", font=("Courier", 24, "bold"))
-                t.write(str(self.pos), align="center", font=("Courier", 6, "bold"))
+                #t.write(str(self.pos), align="center", font=("Courier", 6, "bold"))
         if self.flagged:
             t.color("red")
             t.write("flag", align="center", font=("Courier", 8, "bold"))
             t.color("black", "lime")
+        
         
     def calculate_number(self,mine_list):
         mine_count = 0
@@ -180,10 +183,9 @@ def find_neighbours(start_pos):
         
     
 
-def redraw(t):
-    for tile in tiles:
-        t.clear
-        tile.draw_tile(t)
+    
+
+
 
 screen = turtle.Screen()
 t = turtle.Turtle()
@@ -193,9 +195,14 @@ t.pensize(2)
 t.speed(0)
 screen.tracer(0)
 
+def redraw(t):
+    for tile in tiles:
+        t.clear
+        tile.draw_tile(t)
+    screen.update()
 
 def click_handler(x,y):
-    print(f"X:{x} and Y: {y}")
+    #print(f"X:{x} and Y: {y}")
     target_tile = find_clicked_tile(x,y)
     if target_tile == None:
         print("no tile clicked")
@@ -204,11 +211,11 @@ def click_handler(x,y):
             if target_tile.flagged:
                 target_tile.flagged = False
             else:
-                print("clicked mine")
+                #print("clicked mine")
                 target_tile.hidden = False
             redraw(t)
         else:
-            print("pressed safe")
+            #print("pressed safe")
             tile_pos = target_tile.pos
             unhidden_list = find_neighbours(tile_pos)
             for tile in unhidden_list:
@@ -220,15 +227,17 @@ def click_handler(x,y):
 
 
 def right_click_handler(x,y):
-    print(f"right click X:{x} and Y: {y}")
+    init_time = time.time()
+    #print(f"right click X:{x} and Y: {y}")
     target_tile = find_clicked_tile(x,y)
     if target_tile == None:
         print("no tile clicked")
     else:
-
+        print(f"done tile finding in {time.time()-init_time}")
         target_tile.flagged = True if not target_tile.flagged else False
+        new_init_time = time.time()
         redraw(t)
-        
+        print(f"flagging and redrawing done in {time.time()-new_init_time}")
             
 
 
@@ -266,7 +275,7 @@ t.clear()
 for tile in tiles:
     tile.calculate_number(mines)
     tile.draw_tile(t)
-    
+screen.update()
 print(len(mines))
 screen.onscreenclick(click_handler)
 screen.onscreenclick(fun=right_click_handler,btn=3)
