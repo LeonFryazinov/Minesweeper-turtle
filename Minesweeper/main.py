@@ -196,8 +196,8 @@ t.speed(0)
 screen.tracer(0)
 
 def redraw(t):
+    t.clear()
     for tile in tiles:
-        t.clear
         tile.draw_tile(t)
     screen.update()
 
