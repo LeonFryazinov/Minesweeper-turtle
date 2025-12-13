@@ -9,10 +9,10 @@ mines = []
 
 tile_amount = 18
 
-tile_width = 32
+tile_width = round(576/tile_amount)
 tiles = []
 
-mine_count = 60
+mine_count = 50
 flag_amount = mine_count
 
 first_click = True
@@ -100,8 +100,28 @@ class Tile:
                 t.write(str(self.number), align="center", font=("Courier", int(tile_width*(3/4)), "bold"))
                 #t.write(str(self.pos), align="center", font=("Courier", 6, "bold"))
         if self.flagged:
+            #hard coded flag design, using positions
             t.color("red")
-            t.write("flag", align="center", font=("Courier", 8, "bold"))
+            t.up()
+            t.goto(sum_tuple(self.render_pos,(-0.45*self.width,-0.45*self.width)))
+            t.down()
+            t.begin_fill()
+            t.goto(sum_tuple(self.render_pos,(-0.05*self.width,-0.45*self.width)))
+            t.goto(sum_tuple(self.render_pos,(-0.05*self.width,-0.4*self.width)))
+            t.goto(sum_tuple(self.render_pos,(-0.45*self.width,-0.4*self.width)))
+            t.goto(sum_tuple(self.render_pos,(-0.45*self.width,-0.45*self.width)))
+            t.end_fill()
+            t.up()
+            t.goto(sum_tuple(self.render_pos,(-0.25*self.width,-0.4*self.width)))
+            t.down()
+            t.goto(sum_tuple(self.render_pos,(-0.25*self.width,0.42*self.width)))
+            t.begin_fill()
+            t.goto(sum_tuple(self.render_pos,(0.4*self.width,0.20*self.width)))
+            t.goto(sum_tuple(self.render_pos,(-0.25*self.width,-0.08*self.width)))
+            t.goto(sum_tuple(self.render_pos,(-0.25*self.width,0.42*self.width)))
+            t.end_fill()
+            t.up()
+            #t.write("flag", align="center", font=("Courier", 8, "bold"))
             t.color("black", "lime")
         
         
