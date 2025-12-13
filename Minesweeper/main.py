@@ -7,13 +7,23 @@ import time
 
 mines = []
 
-tile_ammount = 18
+tile_amount = 18
 
 tile_width = 32
 tiles = []
 
+mine_count = 60
+flag_amount = mine_count
+
 first_click = True
 neighbour_pos = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
+
+def pos_in_array(pos,array):
+    for i in array:
+        if match_pos(i,pos):
+            return True
+    return False
+
 
 def tuple_match(a,b):
     return a[0] == b[0] and a[1] == b[1]
@@ -30,8 +40,8 @@ def mine_pos_taken(pos):
 def match_pos(posA,posB):
     return posA[0] == posB[0] and posA[1] == posB[1]
 def pos_in_bound(pos):
-    xbound = pos[0] >= 0 and pos[0] <= tile_ammount-1
-    ybound = pos[1] >= 0 and pos[1] <= tile_ammount-1
+    xbound = pos[0] >= 0 and pos[0] <= tile_amount-1
+    ybound = pos[1] >= 0 and pos[1] <= tile_amount-1
     return xbound and ybound
 
 def delete_item_from_list(tile_list,):
@@ -54,7 +64,7 @@ class Mine:
 class Tile:
     def __init__(self,pos,dimensions):
         self.pos = pos
-        self.render_pos = pos[0]*tile_width-(tile_width*tile_ammount/2),pos[1]*tile_width-(tile_width*tile_ammount/2)
+        self.render_pos = pos[0]*tile_width-(tile_width*tile_amount/2),pos[1]*tile_width-(tile_width*tile_amount/2)
         self.mine = None
         self.flagged = False
         self.width = dimensions[0]
@@ -87,12 +97,13 @@ class Tile:
                 t.up()
                 t.color("black", "lime")
             elif self.number != 0:
-                t.write(str(self.number), align="center", font=("Courier", 24, "bold"))
+                t.write(str(self.number), align="center", font=("Courier", int(tile_width*(3/4)), "bold"))
                 #t.write(str(self.pos), align="center", font=("Courier", 6, "bold"))
         if self.flagged:
             t.color("red")
             t.write("flag", align="center", font=("Courier", 8, "bold"))
             t.color("black", "lime")
+        
         
         
     def calculate_number(self,mine_list):
@@ -126,11 +137,13 @@ def find_clicked_tile(x,y):
     
     return target_tile
 
+
 def get_tile(x,y):
     for tile in tiles:
         if match_pos(tile.pos,(x,y)):
             return tile
     
+    print("returned none")
     return None
 
 def find_neighbours(start_pos):
@@ -140,7 +153,7 @@ def find_neighbours(start_pos):
     if start_exists:
         start_zero = start_tile.number == 0   
     else:
-        return None
+        return []
     
     
     if start_zero:
@@ -199,68 +212,149 @@ def redraw(t):
     t.clear()
     for tile in tiles:
         tile.draw_tile(t)
+    t.up()
+    t.goto(-(int(tile_amount*tile_width)/2),int(((tile_amount*tile_width)/2)+30))
+    t.down()
+    t.write(f"Flags Remaining: {flag_amount}", align="left", font=("Impact", 16, "bold"))
+    t.up()
     screen.update()
 
 def click_handler(x,y):
+    global flag_amount
+    global t
     #print(f"X:{x} and Y: {y}")
     target_tile = find_clicked_tile(x,y)
+    #print(target_tile)
     if target_tile == None:
         print("no tile clicked")
     else:
-        if target_tile.number == -1:
-            if target_tile.flagged:
-                target_tile.flagged = False
+        if target_tile.hidden:
+            global first_click
+            if first_click:
+                global tiles
+                global mines
+                if target_tile.number == -1:
+
+                    pot_new = random.choice(tiles)
+                    while pot_new.number == -1:
+                        pot_new :Tile = random.choice(tiles)
+                    
+                    target_mine: Mine = Mine((-1,-1))
+                    for mine in mines:
+                        if mine.pos == target_tile.pos:
+                            target_mine = mine
+                            #print("mine found")
+                    target_mine.pos = pot_new.pos
+                    for tile in tiles:
+                        tile.calculate_number(mines)
+                    
+                
+                if  target_tile.number != 0:
+                    #print("detected non 0")
+                    
+                    neighbour_positions = []
+                    for i in neighbour_pos:
+                        pot_pos = sum_tuple(target_tile.pos,i)
+                        if pos_in_bound(pot_pos):
+                            neighbour_positions.append(pot_pos)
+                    
+                    for neighbour in neighbour_positions:
+                        
+                        current_neighbour :Tile = get_tile(neighbour[0],neighbour[1])  # type: ignore
+                        #print(f"current neighbour\npos:{current_neighbour.pos}     number:{current_neighbour.number}")
+                        #print(current_neighbour)
+                        if current_neighbour.number == -1:
+                            #print("found mine")
+                            pot_new = random.choice(tiles)
+                            while pot_new.number == -1 or pos_in_array(pot_new.pos,neighbour_positions):
+                                pot_new :Tile = random.choice(tiles)
+
+                            #print(f"potential new tile\npos:{pot_new.pos}\n\n")
+                            target_mine: Mine = Mine((-1,-1))
+
+                            for mine in mines:
+                                if mine.pos == current_neighbour.pos:
+                                    target_mine = mine
+                                    #print("mine found")
+                            target_mine.pos = pot_new.pos
+                            
+                        for tile in tiles:
+                            tile.calculate_number(mines)
+
+
+                first_click = False
+
+
+                    
+                
+        
+            if target_tile.number == -1:
+                if target_tile.flagged:
+                    target_tile.flagged = False
+                    flag_amount += 1
+                    
+                else:
+                    #print("clicked mine")
+                    target_tile.hidden = False
+                    turtle.bye()
+                redraw(t)
             else:
-                #print("clicked mine")
-                target_tile.hidden = False
-            redraw(t)
-        else:
-            #print("pressed safe")
-            tile_pos = target_tile.pos
-            unhidden_list = find_neighbours(tile_pos)
-            for tile in unhidden_list:
-                tile.hidden = False
-                tile.flagged = False
-            
-            redraw(t)
+                #print("pressed safe")
+                tile_pos = target_tile.pos
+                unhidden_list = find_neighbours(tile_pos)
+                for tile in unhidden_list:
+                    tile.hidden = False # type: ignore  love  vs code
+                    if tile.flagged: # type: ignore
+
+                        tile.flagged = False # type: ignore
+                        flag_amount += 1
+                    
+                
+                redraw(t)
 
 
 
 def right_click_handler(x,y):
-    init_time = time.time()
+    global flag_amount
+    #init_time = time.time()
     #print(f"right click X:{x} and Y: {y}")
     target_tile = find_clicked_tile(x,y)
     if target_tile == None:
         print("no tile clicked")
     else:
-        print(f"done tile finding in {time.time()-init_time}")
-        target_tile.flagged = True if not target_tile.flagged else False
-        new_init_time = time.time()
-        redraw(t)
-        print(f"flagging and redrawing done in {time.time()-new_init_time}")
+        if target_tile.hidden:
+            #print(f"done tile finding in {time.time()-init_time}")
+            if not target_tile.flagged:
+                target_tile.flagged = True
+                flag_amount -= 1
+            else:
+                target_tile.flagged = False
+                flag_amount += 1
+            #new_init_time = time.time()
+            redraw(t)
+            #print(f"flagging and redrawing done in {time.time()-new_init_time}")
             
 
 
 
-for x in range(tile_ammount):
-    for y in range(tile_ammount):
+for x in range(tile_amount):
+    for y in range(tile_amount):
         tiles.append(Tile((x,y),(tile_width,tile_width)))
 
-mine_count = 35
 
 
 for i in range(mine_count):
     
-    new_x = random.randint(0,tile_ammount-1)
-    new_y = random.randint(0,tile_ammount-1)
+    new_x = random.randint(0,tile_amount-1)
+    new_y = random.randint(0,tile_amount-1)
     pos_taken = mine_pos_taken((new_x,new_y))
     if not pos_taken:
         new_mine = Mine((new_x,new_y))
         mines.append(new_mine)
     else:
         while pos_taken:
-            new_x = random.randint(0,tile_ammount-1)
-            new_y = random.randint(0,tile_ammount-1)
+            new_x = random.randint(0,tile_amount-1)
+            new_y = random.randint(0,tile_amount-1)
             pos_taken = mine_pos_taken((new_x,new_y))
             new_mine = Mine((new_x,new_y))
             
@@ -275,6 +369,11 @@ t.clear()
 for tile in tiles:
     tile.calculate_number(mines)
     tile.draw_tile(t)
+t.up()
+t.goto(-(int(tile_amount*tile_width)/2),int(((tile_amount*tile_width)/2)+30))
+t.down()
+t.write(f"Flags Remaining: {flag_amount}", align="left", font=("Impact", 18, "bold"))
+t.up()
 screen.update()
 print(len(mines))
 screen.onscreenclick(click_handler)
