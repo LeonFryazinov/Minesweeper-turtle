@@ -2,6 +2,8 @@ import turtle
 import random
 import math
 import time
+from vectors import *
+import enum
 
 
 
@@ -18,34 +20,23 @@ flag_amount = mine_count
 first_click = True
 neighbour_pos = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
 
-def pos_in_array(pos,array):
-    for i in array:
-        if match_pos(i,pos):
-            return True
-    return False
 
 
-def tuple_match(a,b):
-    return a[0] == b[0] and a[1] == b[1]
-def sum_tuple(a,b):
-    return (a[0] + b[0],a[1] + b[1])
+class Style:
+    def __init__(self,col1,col2,border:bool,border_width) -> None:
+        self.main_col = col1
+        self.secondary_col = col2
+        self.border = border
+        self.border_width = border_width
 
-def sub_tuple(a,b):
-    return (a[0] - b[0],a[1] - b[1])
-def mine_pos_taken(pos):
-    for mine in mines:
-        if mine.match_pos(pos):
-            return True
-    return False
-def match_pos(posA,posB):
-    return posA[0] == posB[0] and posA[1] == posB[1]
-def pos_in_bound(pos):
-    xbound = pos[0] >= 0 and pos[0] <= tile_amount-1
-    ybound = pos[1] >= 0 and pos[1] <= tile_amount-1
-    return xbound and ybound
 
-def delete_item_from_list(tile_list,):
-    pass
+
+class Button:
+    def __init__(self,pos:tuple,dim:tuple,style:Style,func:function) -> None:
+        pass
+
+        
+
 class Mine:
     def __init__(self,pos):
         self.pos = pos
@@ -134,7 +125,10 @@ class Tile:
             if mine.border_pos(self.pos):
                 mine_count += 1
             if mine.match_pos(self.pos):
+                global flag_amount
                 mine_count = -1
+                self.flagged = True
+                flag_amount -= 1
                 #print("mine added")
                 break
 
@@ -181,7 +175,7 @@ def find_neighbours(start_pos):
         
         for direction in neighbour_pos:
             pot_pos = sum_tuple(start_pos,direction)
-            if pos_in_bound(pot_pos):
+            if pos_in_bound(pot_pos,tile_amount):
                 new_tile = get_tile(pot_pos[0],pot_pos[1])
                 if new_tile != None:
                     search_list.append(new_tile)
@@ -199,7 +193,7 @@ def find_neighbours(start_pos):
                         #add neighbouring tiles to the search list
                         for direction in neighbour_pos:
                             pot_pos = sum_tuple(tile.pos,direction)
-                            if pos_in_bound(pot_pos):
+                            if pos_in_bound(pot_pos,tile_amount):
                                 new_tile = get_tile(pot_pos[0],pot_pos[1])
                                 if new_tile != None:
                                     search_list.append(new_tile)
@@ -275,7 +269,7 @@ def click_handler(x,y):
                     neighbour_positions = []
                     for i in neighbour_pos:
                         pot_pos = sum_tuple(target_tile.pos,i)
-                        if pos_in_bound(pot_pos):
+                        if pos_in_bound(pot_pos,tile_amount):
                             neighbour_positions.append(pot_pos)
                     
                     for neighbour in neighbour_positions:
@@ -367,7 +361,7 @@ for i in range(mine_count):
     
     new_x = random.randint(0,tile_amount-1)
     new_y = random.randint(0,tile_amount-1)
-    pos_taken = mine_pos_taken((new_x,new_y))
+    pos_taken = object_pos_taken((new_x,new_y),mines)
     if not pos_taken:
         new_mine = Mine((new_x,new_y))
         mines.append(new_mine)
@@ -375,7 +369,7 @@ for i in range(mine_count):
         while pos_taken:
             new_x = random.randint(0,tile_amount-1)
             new_y = random.randint(0,tile_amount-1)
-            pos_taken = mine_pos_taken((new_x,new_y))
+            pos_taken = object_pos_taken((new_x,new_y),mines)
             new_mine = Mine((new_x,new_y))
             
             #print("stuck finding a mine place")
