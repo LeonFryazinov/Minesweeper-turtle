@@ -14,29 +14,66 @@ tile_amount = 18
 tile_width = round(576/tile_amount)
 tiles = []
 
-mine_count = 50
+mine_count = 60
 flag_amount = mine_count
 
 first_click = True
 neighbour_pos = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
 
+timer = 0
+timer_active = False
 
+screen = turtle.Screen()
+t = turtle.Turtle()
+t.color("black", "lime")
+t.ht()
+t.pensize(2)
+t.speed(0)
+
+ui = turtle.Turtle()
+ui.color("black")
+ui.ht()
+ui.pensize(2)
+ui.speed(0)
+
+screen.tracer(0)
 
 class Style:
-    def __init__(self,col1,col2,border:bool,border_width) -> None:
-        self.main_col = col1
+    def __init__(self,col1,col2,border:bool,border_width:int,font="Courier",font_size=16) -> None:
+        self.primary_col = col1
         self.secondary_col = col2
         self.border = border
         self.border_width = border_width
-
-
-
+        self.font = font
+        self.font_size = font_size
 class Button:
-    def __init__(self,pos:tuple,dim:tuple,style:Style,func:function) -> None:
-        pass
-
+    def __init__(self,pos:tuple,dim:tuple,text:str,style:Style,func) -> None:
+        self.pos = pos
+        self.dim = dim
+        self.text = text
+        self.style = style
+        self.func = func
+    def draw_button(self,t:turtle.Turtle):
+        t.up()
+        if self.style.border:
+            t.color(self.style.primary_col,self.style.secondary_col)
+            t.pensize(self.style.border_width)
+        else:
+            t.pensize(0)
+            t.color(self.style.primary_col)
         
-
+        t.goto(sum_tuple(self.pos,(self.dim[0]/2,self.dim[1]/2))) #goes to top right
+        t.begin_fill()
+        t.goto(sum_tuple(self.pos,(self.dim[0]/2,-self.dim[1]/2)))# goes to bottom right
+        t.goto(sum_tuple(self.pos,(-self.dim[0]/2,-self.dim[1]/2))) # goes to bottom left
+        t.goto(sum_tuple(self.pos,(-self.dim[0]/2,self.dim[1]/2))) # goes to top left
+        t.goto(sum_tuple(self.pos,(-self.dim[0]/2,self.dim[1]/2))) # back to start
+        t.end_fill()
+        t.write(self.text, align="center", font=(self.style.font, self.style.font_size, "bold"))
+    def hitbox_collision(self,pos):
+        xbound = (self.pos[0] + self.dim[0]) > pos[0] and (self.pos[0] - self.dim[0]) < pos[0]
+        ybound = (self.pos[1] + self.dim[1]) > pos[1] and (self.pos[1] - self.dim[1]) < pos[1]
+        return xbound and ybound
 class Mine:
     def __init__(self,pos):
         self.pos = pos
@@ -127,8 +164,8 @@ class Tile:
             if mine.match_pos(self.pos):
                 global flag_amount
                 mine_count = -1
-                self.flagged = True
-                flag_amount -= 1
+                #self.flagged = True
+                #flag_amount -= 1
                 #print("mine added")
                 break
 
@@ -198,29 +235,8 @@ def find_neighbours(start_pos):
                                 if new_tile != None:
                                     search_list.append(new_tile)
                                     #print(f"added new tile to search at coordinate: {pot_pos}")
-                                    
 
-
-            
-            
-                                    
-                                    
-
-    return neighbours_list
-        
-    
-
-    
-
-
-
-screen = turtle.Screen()
-t = turtle.Turtle()
-t.color("black", "lime")
-t.ht()
-t.pensize(2)
-t.speed(0)
-screen.tracer(0)
+    return neighbours_list   
 
 def redraw(t):
     t.clear()
@@ -233,16 +249,30 @@ def redraw(t):
     t.up()
     screen.update()
 
-def click_handler(x,y):
+def generate_mines():
+    global mine_count
+    for i in range(mine_count):
+        new_x = random.randint(0,tile_amount-1)
+        new_y = random.randint(0,tile_amount-1)
+        pos_taken = object_pos_taken((new_x,new_y),mines)
+        if not pos_taken:
+            new_mine = Mine((new_x,new_y))
+            mines.append(new_mine)
+        else:
+            while pos_taken:
+                new_x = random.randint(0,tile_amount-1)
+                new_y = random.randint(0,tile_amount-1)
+                pos_taken = object_pos_taken((new_x,new_y),mines)
+                new_mine = Mine((new_x,new_y))
+                
+                #print("stuck finding a mine place")
+            mines.append(new_mine)
+        #print(f"x:{new_x},y:{new_y}")
+
+def click_tile(target_tile):
     global flag_amount
     global t
-    #print(f"X:{x} and Y: {y}")
-    target_tile = find_clicked_tile(x,y)
-    #print(target_tile)
-    if target_tile == None:
-        print("no tile clicked")
-    else:
-        if target_tile.hidden:
+    if target_tile.hidden:
             global first_click
             if first_click:
                 global tiles
@@ -328,6 +358,22 @@ def click_handler(x,y):
 
 
 
+
+
+def click_handler(x,y):
+    global flag_amount
+    global t
+    #print(f"X:{x} and Y: {y}")
+    target_tile = find_clicked_tile(x,y)
+    #print(target_tile)
+    if target_tile == None:
+        print("no tile clicked")
+    else:
+        click_tile(target_tile)
+        
+
+
+
 def right_click_handler(x,y):
     global flag_amount
     #init_time = time.time()
@@ -357,25 +403,8 @@ for x in range(tile_amount):
 
 
 
-for i in range(mine_count):
-    
-    new_x = random.randint(0,tile_amount-1)
-    new_y = random.randint(0,tile_amount-1)
-    pos_taken = object_pos_taken((new_x,new_y),mines)
-    if not pos_taken:
-        new_mine = Mine((new_x,new_y))
-        mines.append(new_mine)
-    else:
-        while pos_taken:
-            new_x = random.randint(0,tile_amount-1)
-            new_y = random.randint(0,tile_amount-1)
-            pos_taken = object_pos_taken((new_x,new_y),mines)
-            new_mine = Mine((new_x,new_y))
-            
-            #print("stuck finding a mine place")
-        mines.append(new_mine)
-    #print(f"x:{new_x},y:{new_y}")
 
+generate_mines()
 
 
 t.clear()
@@ -390,8 +419,33 @@ t.write(f"Flags Remaining: {flag_amount}", align="left", font=("Impact", 18, "bo
 t.up()
 screen.update()
 print(len(mines))
+
+
+
+def update_timer():
+    global timer
+    global ui
+    global tile_amount
+    global tile_width
+    ui.goto(0,int(((tile_amount*tile_width)/2)+30))
+    ui.clear()
+    
+    print(F"current time: {timer}")
+    ui.write(f"timer:{timer}", align="left", font=("Impact", 18, "bold"))
+    screen.update()
+    timer += 1
+    screen.ontimer(fun=update_timer,t=1000)
+    
+
+
+
+
+
+
+
 screen.onscreenclick(click_handler)
 screen.onscreenclick(fun=right_click_handler,btn=3)
+update_timer()
 screen.mainloop()
 
 
