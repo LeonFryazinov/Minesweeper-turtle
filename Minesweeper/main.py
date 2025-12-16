@@ -14,7 +14,7 @@ tile_amount = 18
 tile_width = round(576/tile_amount)
 tiles = []
 
-mine_count = 50
+mine_count = 60
 flag_amount = mine_count
 
 first_click = True
@@ -180,7 +180,7 @@ class Tile:
             if mine.border_pos(self.pos):
                 mine_count += 1
             if mine.match_pos(self.pos):
-                global flag_amount
+                
                 mine_count = -1
                 #self.flagged = True
                 #flag_amount -= 1
@@ -398,7 +398,7 @@ def check_win():
     
     for mine in mines:
         matching_tile = get_tile(mine.pos[0],mine.pos[1])
-        if matching_tile.flagged:
+        if matching_tile.flagged:  # type: ignore
             flagged_mines += 1
 
     all_mines_flagged = flagged_mines == mine_count
@@ -410,6 +410,9 @@ def check_win():
             hidden_tiles += 1
 
     only_mines_left = hidden_tiles == mine_count
+
+    #print(f"only mines left: {only_mines_left}")
+    #print(f"all mines flagged: {all_mines_flagged}")
 
     return only_mines_left or all_mines_flagged
             
@@ -565,11 +568,11 @@ def click_handler(x,y):
                 print("no tile clicked")
             else:
                 click_tile(target_tile)
-
-            win = check_win()
-            if win:
-                state = States.END
-                show_end_screen(False)
+            if state == States.GAME:
+                win = check_win()
+                if win:
+                    state = States.END
+                    show_end_screen(True)
                 
            
 
@@ -596,19 +599,20 @@ def right_click_handler(x,y):
             if target_tile.hidden:
                 #print(f"done tile finding in {time.time()-init_time}")
                 if not target_tile.flagged:
-                    target_tile.flagged = True
-                    flag_amount -= 1
+                    if flag_amount > 0:
+                        target_tile.flagged = True
+                        flag_amount -= 1
                 else:
                     target_tile.flagged = False
                     flag_amount += 1
                 #new_init_time = time.time()
                 redraw(t)
                 #print(f"flagging and redrawing done in {time.time()-new_init_time}")
-                win = check_win()
-                if win:
-                    state = States.END
-                    show_end_screen(False)
-                print(win)
+                if state == States.GAME:
+                    win = check_win()
+                    if win:
+                        state = States.END
+                        show_end_screen(True)
 
 
 
