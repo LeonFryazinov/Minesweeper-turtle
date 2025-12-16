@@ -3,7 +3,7 @@ import random
 import math
 import time
 from vectors import *
-import enum
+from enum import Enum
 
 
 
@@ -23,6 +23,8 @@ neighbour_pos = [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]
 timer = 0
 timer_active = False
 
+
+
 screen = turtle.Screen()
 t = turtle.Turtle()
 t.color("black", "lime")
@@ -37,6 +39,16 @@ ui.pensize(2)
 ui.speed(0)
 
 screen.tracer(0)
+
+class States(Enum):
+    START = 0
+    GAME = 1
+    END = 2
+
+
+
+
+state = States.START
 
 class Style:
     def __init__(self,col1,col2,border:bool,border_width:int,font="Courier",font_size=16) -> None:
@@ -53,27 +65,33 @@ class Button:
         self.text = text
         self.style = style
         self.func = func
-    def draw_button(self,t:turtle.Turtle):
-        t.up()
+    def draw_button(self,turt:turtle.Turtle):
+        turt.up()
         if self.style.border:
-            t.color(self.style.primary_col,self.style.secondary_col)
-            t.pensize(self.style.border_width)
+            turt.color(self.style.primary_col,self.style.secondary_col)
+            turt.pensize(self.style.border_width)
         else:
-            t.pensize(0)
-            t.color(self.style.primary_col)
+            turt.pensize(0)
+            turt.color(self.style.primary_col)
         
-        t.goto(sum_tuple(self.pos,(self.dim[0]/2,self.dim[1]/2))) #goes to top right
-        t.begin_fill()
-        t.goto(sum_tuple(self.pos,(self.dim[0]/2,-self.dim[1]/2)))# goes to bottom right
-        t.goto(sum_tuple(self.pos,(-self.dim[0]/2,-self.dim[1]/2))) # goes to bottom left
-        t.goto(sum_tuple(self.pos,(-self.dim[0]/2,self.dim[1]/2))) # goes to top left
-        t.goto(sum_tuple(self.pos,(-self.dim[0]/2,self.dim[1]/2))) # back to start
-        t.end_fill()
-        t.write(self.text, align="center", font=(self.style.font, self.style.font_size, "bold"))
+        turt.goto(sum_tuple(self.pos,(self.dim[0]/2,self.dim[1]/2))) #goes to top right
+        turt.begin_fill()
+        turt.goto(sum_tuple(self.pos,(self.dim[0]/2,-self.dim[1]/2)))# goes to bottom right
+        turt.goto(sum_tuple(self.pos,(-self.dim[0]/2,-self.dim[1]/2))) # goes to bottom left
+        turt.goto(sum_tuple(self.pos,(-self.dim[0]/2,self.dim[1]/2))) # goes to top left
+        turt.goto(sum_tuple(self.pos,(-self.dim[0]/2,self.dim[1]/2))) # back to start
+        turt.end_fill()
+        turt.up()
+        turt.goto(sum_tuple(self.pos,(0,-self.style.font_size/2)))
+        turt.down()
+        turt.write(self.text, align="center", font=(self.style.font, self.style.font_size, "bold"))
     def hitbox_collision(self,pos):
-        xbound = (self.pos[0] + self.dim[0]) > pos[0] and (self.pos[0] - self.dim[0]) < pos[0]
-        ybound = (self.pos[1] + self.dim[1]) > pos[1] and (self.pos[1] - self.dim[1]) < pos[1]
+        xbound = (self.pos[0] + self.dim[0]/2) > pos[0] and (self.pos[0] - self.dim[0]/2) < pos[0]
+        ybound = (self.pos[1] + self.dim[1]/2) > pos[1] and (self.pos[1] - self.dim[1]/2) < pos[1]
         return xbound and ybound
+
+
+
 class Mine:
     def __init__(self,pos):
         self.pos = pos
@@ -100,8 +118,8 @@ class Tile:
         self.number = 0
         self.hidden = True
     def draw_tile(self,turt):
-        t.color("black","lime" if self.hidden else "#d1b06f")
-        t.up()
+        turt.color("black","lime" if self.hidden else "#d1b06f")
+        turt.up()
         t.goto(sum_tuple(self.render_pos,(-self.width/2,self.height/2)))#top left corner
         t.down()
         t.begin_fill()
@@ -344,57 +362,77 @@ def click_tile(target_tile):
                 redraw(t)
             else:
                 #print("pressed safe")
-                tile_pos = target_tile.pos
-                unhidden_list = find_neighbours(tile_pos)
-                for tile in unhidden_list:
-                    tile.hidden = False # type: ignore  love  vs code
-                    if tile.flagged: # type: ignore
-
-                        tile.flagged = False # type: ignore
-                        flag_amount += 1
+                if target_tile.flagged:
+                    target_tile.flagged = False
+                    flag_amount += 1
+                else:
+                    tile_pos = target_tile.pos
                     
-                
+                    unhidden_list = find_neighbours(tile_pos)
+                    for tile in unhidden_list:
+                        tile.hidden = False # type: ignore  love  vs code
+                        if tile.flagged: # type: ignore
+
+                            tile.flagged = False # type: ignore
+                            flag_amount += 1
+                        
+                    
                 redraw(t)
 
 
 
 
 
-def click_handler(x,y):
-    global flag_amount
-    global t
-    #print(f"X:{x} and Y: {y}")
-    target_tile = find_clicked_tile(x,y)
-    #print(target_tile)
-    if target_tile == None:
-        print("no tile clicked")
-    else:
-        click_tile(target_tile)
-        
+def setup_game():
+    global state
+    state = States.GAME
+    print(state)
+    mines.clear()
+    generate_mines()
+    t.clear()
+    #print(mines)
+    for tile in tiles:
+        tile.calculate_number(mines)
+        tile.draw_tile(t)
+
+    t.up()
+    t.goto(-(int(tile_amount*tile_width)/2),int(((tile_amount*tile_width)/2)+30))
+    t.down()
+    t.write(f"Flags Remaining: {flag_amount}", align="left", font=("Impact", 18, "bold"))
+    t.up()
+    screen.update()
+    timer = 0
+    update_timer()
+
+
+def start_button():
+    setup_game()
+    
+
+def end_button():
+    setup_game()
+
+    
+    
 
 
 
-def right_click_handler(x,y):
-    global flag_amount
-    #init_time = time.time()
-    #print(f"right click X:{x} and Y: {y}")
-    target_tile = find_clicked_tile(x,y)
-    if target_tile == None:
-        print("no tile clicked")
-    else:
-        if target_tile.hidden:
-            #print(f"done tile finding in {time.time()-init_time}")
-            if not target_tile.flagged:
-                target_tile.flagged = True
-                flag_amount -= 1
-            else:
-                target_tile.flagged = False
-                flag_amount += 1
-            #new_init_time = time.time()
-            redraw(t)
-            #print(f"flagging and redrawing done in {time.time()-new_init_time}")
-            
+Start_button_list = [Button((0,0),(300,100),"Play",Style("black","#446611",True,2),start_button)]
+End_button_list = [Button((0,0),(200,75),"Play Again",Style("black","#bfa978",True,2),setup_game)]
 
+def draw_start_ui():
+    global ui
+
+    ui.up()
+    ui.goto((0,70))
+    ui.down()
+    ui.write("Minesweeper",align="center", font=("Impact", 36, "bold"))
+    ui.up()
+    
+    for button in Start_button_list:
+        button.draw_button(ui)
+
+    screen.update()
 
 
 for x in range(tile_amount):
@@ -404,21 +442,9 @@ for x in range(tile_amount):
 
 
 
-generate_mines()
 
 
-t.clear()
-#print(mines)
-for tile in tiles:
-    tile.calculate_number(mines)
-    tile.draw_tile(t)
-t.up()
-t.goto(-(int(tile_amount*tile_width)/2),int(((tile_amount*tile_width)/2)+30))
-t.down()
-t.write(f"Flags Remaining: {flag_amount}", align="left", font=("Impact", 18, "bold"))
-t.up()
-screen.update()
-print(len(mines))
+
 
 
 
@@ -434,24 +460,66 @@ def update_timer():
     ui.write(f"timer:{timer}", align="left", font=("Impact", 18, "bold"))
     screen.update()
     timer += 1
-    screen.ontimer(fun=update_timer,t=1000)
+    if state == States.GAME:
+        screen.ontimer(fun=update_timer,t=1000)
     
 
 
 
 
+def click_handler(x,y):
+    print(state)
+    match state:
+        case States.START:
+            for button in Start_button_list:
+                if button.hitbox_collision((x,y)):
+                    button.func()
+        case States.GAME:
+            global flag_amount
+            global t
+            #print(f"X:{x} and Y: {y}")
+            target_tile = find_clicked_tile(x,y)
+            #print(target_tile)
+            if target_tile == None:
+                print("no tile clicked")
+            else:
+                click_tile(target_tile)
+        case States.END:
+            pass
+        
 
 
 
+def right_click_handler(x,y):
+    if state == States.GAME:
+            
+        global flag_amount
+        #init_time = time.time()
+        #print(f"right click X:{x} and Y: {y}")
+        target_tile = find_clicked_tile(x,y)
+        if target_tile == None:
+            print("no tile clicked")
+        else:
+            if target_tile.hidden:
+                #print(f"done tile finding in {time.time()-init_time}")
+                if not target_tile.flagged:
+                    target_tile.flagged = True
+                    flag_amount -= 1
+                else:
+                    target_tile.flagged = False
+                    flag_amount += 1
+                #new_init_time = time.time()
+                redraw(t)
+                #print(f"flagging and redrawing done in {time.time()-new_init_time}")
+                
+
+
+
+draw_start_ui()
 screen.onscreenclick(click_handler)
 screen.onscreenclick(fun=right_click_handler,btn=3)
-update_timer()
+
+
+
 screen.mainloop()
-
-
-#tile_list = []
-#for x in range(10):
-#    for y in range(10):
-#        tile_list.append(Tile((x,y)))
-#
 
