@@ -14,7 +14,7 @@ tile_amount = 18
 tile_width = round(576/tile_amount)
 tiles = []
 
-mine_count = 55
+mine_count = 50
 flag_amount = mine_count
 
 first_click = True
@@ -358,7 +358,12 @@ def click_tile(target_tile):
                 else:
                     #print("clicked mine")
                     target_tile.hidden = False
-                    turtle.bye()
+                    global state
+                    state = States.END
+                    show_end_screen(False)
+
+                    return
+                    
                 redraw(t)
             else:
                 #print("pressed safe")
@@ -415,6 +420,15 @@ def check_win():
 
 def setup_game():
     global state
+    global first_click
+    global timer
+    global flag_amount
+    global mine_count
+
+    
+    timer = 0
+    flag_amount = mine_count
+    first_click = True
     state = States.GAME
     #print(state)
     mines.clear()
@@ -423,6 +437,8 @@ def setup_game():
     #print(mines)
     for tile in tiles:
         tile.calculate_number(mines)
+        tile.hidden = True
+        tile.flagged = False
         tile.draw_tile(t)
 
     t.up()
@@ -433,6 +449,7 @@ def setup_game():
     screen.update()
     timer = 0
     update_timer()
+    
 
 
 def start_button():
@@ -473,7 +490,38 @@ for x in range(tile_amount):
 
 
 
+def show_end_screen(won:bool):
+    global ui
+    global timer
+    ui.clear()
+    ui.color("black","#a3e6e0")
+    ui.up()
+    ui.goto((300,280))
+    ui.down
+    ui.begin_fill()
+    ui.goto((-300,280))
+    ui.goto((-300,-280))
+    ui.goto((300,-280))
+    ui.goto((300,280))
+    ui.end_fill()
+    ui.up()
+    ui.goto((0,100))
+    if won:
+        ui.down()
+        ui.write("You won!",align="center", font=("Impact", 30, "bold"))
+        ui.up()
+        ui.goto((0,50))
+        ui.down()
+        ui.write(f"time:{timer}",align="center", font=("Impact", 24, "bold"))
+        ui.up()
+    else:
+        ui.down()
+        ui.write("You blew up",align="center", font=("Impact", 30, "bold"))
+        ui.up()
 
+    for button in End_button_list:
+        button.draw_button(ui)
+        
 
 
 
@@ -483,21 +531,24 @@ def update_timer():
     global ui
     global tile_amount
     global tile_width
-    ui.goto(0,int(((tile_amount*tile_width)/2)+30))
-    ui.clear()
-    
-    #print(F"current time: {timer}")
-    ui.write(f"timer:{timer}", align="left", font=("Impact", 18, "bold"))
-    screen.update()
-    timer += 1
+    global state
     if state == States.GAME:
+        ui.goto(0,int(((tile_amount*tile_width)/2)+30))
+        ui.clear()
+        
+        #print(F"current time: {timer}")
+        ui.write(f"timer:{timer}", align="left", font=("Impact", 18, "bold"))
+        screen.update()
+        timer += 1
+        
         screen.ontimer(fun=update_timer,t=1000)
-    
+        
 
 
 
 
 def click_handler(x,y):
+    global state
     #print(state)
     match state:
         case States.START:
@@ -516,16 +567,23 @@ def click_handler(x,y):
                 click_tile(target_tile)
 
             win = check_win()
-            print(win)
+            if win:
+                state = States.END
+                show_end_screen(False)
+                
+           
 
             
         case States.END:
-            pass
+            for button in End_button_list:
+                if button.hitbox_collision((x,y)):
+                    button.func()
         
 
 
 
 def right_click_handler(x,y):
+    global state
     if state == States.GAME:
             
         global flag_amount
@@ -547,6 +605,9 @@ def right_click_handler(x,y):
                 redraw(t)
                 #print(f"flagging and redrawing done in {time.time()-new_init_time}")
                 win = check_win()
+                if win:
+                    state = States.END
+                    show_end_screen(False)
                 print(win)
 
 
@@ -558,4 +619,11 @@ screen.onscreenclick(fun=right_click_handler,btn=3)
 
 
 screen.mainloop()
+
+
+#tile_list = []
+#for x in range(10):
+#    for y in range(10):
+#        tile_list.append(Tile((x,y)))
+#
 
