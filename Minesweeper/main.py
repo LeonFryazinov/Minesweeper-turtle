@@ -14,7 +14,7 @@ tile_amount = 18
 tile_width = round(576/tile_amount)
 tiles = []
 
-mine_count = 60
+mine_count = 55
 flag_amount = mine_count
 
 first_click = True
@@ -382,11 +382,41 @@ def click_tile(target_tile):
 
 
 
+def check_win():
+    global tiles
+    global mines
+    global mine_count 
+
+    flagged_mines = 0
+
+
+    
+    for mine in mines:
+        matching_tile = get_tile(mine.pos[0],mine.pos[1])
+        if matching_tile.flagged:
+            flagged_mines += 1
+
+    all_mines_flagged = flagged_mines == mine_count
+        
+    hidden_tiles = 0
+    
+    for tile in tiles:
+        if tile.hidden:
+            hidden_tiles += 1
+
+    only_mines_left = hidden_tiles == mine_count
+
+    return only_mines_left or all_mines_flagged
+            
+        
+        
+        
+
 
 def setup_game():
     global state
     state = States.GAME
-    print(state)
+    #print(state)
     mines.clear()
     generate_mines()
     t.clear()
@@ -456,7 +486,7 @@ def update_timer():
     ui.goto(0,int(((tile_amount*tile_width)/2)+30))
     ui.clear()
     
-    print(F"current time: {timer}")
+    #print(F"current time: {timer}")
     ui.write(f"timer:{timer}", align="left", font=("Impact", 18, "bold"))
     screen.update()
     timer += 1
@@ -468,7 +498,7 @@ def update_timer():
 
 
 def click_handler(x,y):
-    print(state)
+    #print(state)
     match state:
         case States.START:
             for button in Start_button_list:
@@ -484,6 +514,11 @@ def click_handler(x,y):
                 print("no tile clicked")
             else:
                 click_tile(target_tile)
+
+            win = check_win()
+            print(win)
+
+            
         case States.END:
             pass
         
@@ -511,7 +546,8 @@ def right_click_handler(x,y):
                 #new_init_time = time.time()
                 redraw(t)
                 #print(f"flagging and redrawing done in {time.time()-new_init_time}")
-                
+                win = check_win()
+                print(win)
 
 
 
